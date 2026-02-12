@@ -89,9 +89,16 @@ export const db = {
   },
 
   async createCampaign(name: string): Promise<number> {
+    const trimmedName = name.trim();
+    if (!trimmedName || trimmedName.length > 100) {
+      throw new Error('Invalid campaign name: Must be 1-100 characters');
+    }
+    // Basic sanitization (though React handles display sanitization, good to prevent weird chars in DB)
+    const sanitizedName = trimmedName.replace(/[<>]/g, ''); 
+
     const db = await initDB();
     const campaign: Campaign = {
-      name,
+      name: sanitizedName,
       createdAt: new Date(),
       updatedAt: new Date(),
       contacts: [],
@@ -102,6 +109,15 @@ export const db = {
   },
 
   async updateCampaign(id: number, data: Partial<Campaign>): Promise<Campaign> {
+    if (data.name) {
+       const trimmed = data.name.trim();
+       if (!trimmed || trimmed.length > 100) throw new Error('Invalid name');
+       data.name = trimmed.replace(/[<>]/g, '');
+    }
+    if (data.template && data.template.length > 5000) {
+        throw new Error('Template too long (max 5000 chars)');
+    }
+
     const db = await initDB();
     const campaign = await db.get('campaigns', id);
     if (!campaign) throw new Error('Campaign not found');
