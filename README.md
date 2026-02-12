@@ -70,6 +70,17 @@ Esta es una aplicación web construida con React y Vite. Necesitas [Node.js](htt
 
 ---
 
+## 🧪 Pruebas
+Este proyecto incluye una suite de tests automatizados utilizando **Vitest** y **React Testing Library**.
+
+Para ejecutar los tests:
+```bash
+npm test
+```
+Esto verificará la lógica de validación de teléfonos, manipulación de base de datos simulada y renderizado de componentes críticos.
+
+---
+
 ## 🔮 Mejoras Futuras y Deuda Técnica
 
 Para mantener la salud del proyecto, hemos identificado áreas para trabajo futuro:
