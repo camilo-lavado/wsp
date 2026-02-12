@@ -17,9 +17,10 @@ Una potente aplicación web centrada en la privacidad para gestionar y enviar me
 ### ⚡ Velocidad y Eficiencia
 - **Modo Rápido**: Usa `Alt + Enter` para enviar automáticamente al siguiente contacto pendiente.
 - **Interfaz Radical**: Diseño "Glassmorphism" moderno con animaciones fluidas.
-- **Internacionalización**: Soporte para formatos de teléfono de todo el mundo.
+- **Internacionalización**: Soporte completo para Inglés 🇺🇸 y Español 🇨🇱.
 
 ### 🛡️ Seguridad y Validación
+- **Seguridad Robusta**: Headers CSP, sanitización de inputs y auditoría de dependencias.
 - **Validación Inteligente**: Integración con `libphonenumber-js` de Google para formateo exacto.
 - **Lista Negra**: Sistema de bloqueo permanente (opt-out) para evitar mensajes no deseados.
 - **Gestión de Errores**: Marca números como inválidos sin perder el hilo de la campaña.
@@ -86,7 +87,7 @@ Esto verificará la lógica de validación de teléfonos, manipulación de base 
 Para mantener la salud del proyecto, hemos identificado áreas para trabajo futuro:
 
 ### Deuda Técnica
-- **Textos Hardcodeados**: Implementar una librería i18n real (como `react-i18next`) sería mejor que textos manuales.
+*(Sección vacía por ahora - ¡Buen trabajo!)*
 
 ### Hoja de Ruta
 - **Sincronización en la Nube**: Backup opcional encriptado.
@@ -99,7 +100,17 @@ Para mantener la salud del proyecto, hemos identificado áreas para trabajo futu
 - **Framework**: React + Vite
 - **Estilos**: Tailwind CSS + Framer Motion
 - **Datos**: IndexedDB (`idb`)
+- **Internacionalización**: `react-i18next` + `i18next`
 - **Utilidades**: `xlsx`, `libphonenumber-js`, `react-hot-toast`
+
+## 🛡️ Seguridad
+
+Esta aplicación ha sido endurecida siguiendo prácticas de seguridad modernas:
+
+1.  **Content Security Policy (CSP)**: Headers estrictos configurados para prevenir ataques XSS.
+2.  **Validación de Entradas**: Todos los datos (nombres de campañas, plantillas) son sanitizados antes de guardarse.
+3.  **Auditoría de Dependencias**: Monitoreo constante de vulnerabilidades en librerías.
+4.  **Almacenamiento Local**: Los datos viven en tu navegador. Si usas una computadora compartida, asegúrate de cerrar sesión o limpiar los datos del sitio al terminar.
 
 ## 🔒 Privacidad
 Esta aplicación se ejecuta **100% en tu dispositivo**. No se envían datos de contactos a servidores externos, solo a WhatsApp a través de los enlaces oficiales `wa.me`.
