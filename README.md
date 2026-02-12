@@ -1,8 +1,97 @@
-# React + Vite
+# WhatsApp Sender Pro 🚀
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**[Español]**  
+Una potente aplicación web centrada en la privacidad para gestionar y enviar mensajes masivos de WhatsApp. Diseñada para la eficiencia operativa, cuenta con gestión de campañas, librerías de plantillas, validación inteligente y un sistema de lista negra (opt-out).
 
-Currently, two official plugins are available:
+![Dashboard Preview](./dashboard-preview.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
+
+## ✨ Características Clave
+
+### 📢 Gestión de Campañas
+- **Dashboard**: Visualiza todas las campañas con métricas de progreso.
+- **Historial**: Accede a registros pasados y reanuda envíos pendientes.
+- **Persistencia**: Datos almacenados localmente en tu navegador (IndexedDB) con años de historial.
+
+### ⚡ Velocidad y Eficiencia
+- **Modo Rápido**: Usa `Alt + Enter` para enviar automáticamente al siguiente contacto pendiente.
+- **Interfaz Radical**: Diseño "Glassmorphism" moderno con animaciones fluidas.
+- **Internacionalización**: Soporte para formatos de teléfono de todo el mundo.
+
+### 🛡️ Seguridad y Validación
+- **Validación Inteligente**: Integración con `libphonenumber-js` de Google para formateo exacto.
+- **Lista Negra**: Sistema de bloqueo permanente (opt-out) para evitar mensajes no deseados.
+- **Gestión de Errores**: Marca números como inválidos sin perder el hilo de la campaña.
+
+### 📊 Datos y Reportes
+- **Importación Excel**: Arrastra y suelta archivos `.xlsx` o `.csv`. Mapeo automático de columnas "Nombre" y "Teléfono".
+- **Exportación**: Descarga reportes detallados en Excel con hora de envío y estado de cada contacto.
+
+---
+
+## 🛠️ Instalación
+
+Esta es una aplicación web construida con React y Vite. Necesitas [Node.js](https://nodejs.org/) instalado.
+
+1.  **Clonar/Descargar** el repositorio.
+2.  Abrir una terminal en la carpeta del proyecto.
+3.  Instalar dependencias:
+    ```bash
+    npm install
+    ```
+4.  Iniciar el servidor local:
+    ```bash
+    npm run dev
+    ```
+5.  Abre tu navegador en `http://localhost:5173`.
+
+---
+
+## � Guía de Uso
+
+### 1. Iniciar una Campaña
+- Ve al **Dashboard** y haz clic en **Nueva Campaña**.
+- Dale un nombre (ej. "Promo Octubre").
+- Sube tu archivo Excel con los contactos.
+
+### 2. Redactar el Mensaje
+- Escribe tu mensaje en el editor.
+- Usa la sintaxis `{variable}` para insertar datos de tus columnas de Excel (ej. "Hola {nombre}").
+- Usa el **Gestor de Plantillas** para guardar scripts recurrentes.
+
+### 3. Enviando
+- Haz clic en **Enviar** en una fila de contacto para abrir WhatsApp Web.
+- **Pro Tip**: Presiona `Alt + Enter` para enviar instantáneamente al primer contacto "Pendiente" de la lista.
+
+### 4. Manejo de Excepciones
+- **¿Número Inválido?** Abre el menú de la fila (⋮) y selecciona **Marcar Inválido**.
+- **¿Usuario Opt-out?** Abre el menú de la fila (⋮) y selecciona **Lista Negra**. Esto bloquea el número para TODAS las campañas futuras.
+
+---
+
+## 🔮 Mejoras Futuras y Deuda Técnica
+
+Para mantener la salud del proyecto, hemos identificado áreas para trabajo futuro:
+
+### Deuda Técnica
+- **Cobertura de Tests**: Actualmente no hay tests unitarios o de integración. Añadir tests para `phoneUtils.js` y `db.js` es crítico.
+- **TypeScript**: El proyecto está en JavaScript. Migrar a **TypeScript** prevendría errores en tiempo de ejecución.
+- **División de Componentes**: `Editor.jsx` ha sido refactorizado, pero otros componentes podrían beneficiarse de una mayor modularidad.
+- **Textos Hardcodeados**: Implementar una librería i18n real (como `react-i18next`) sería mejor que textos manuales.
+
+### Hoja de Ruta
+- **Sincronización en la Nube**: Backup opcional encriptado.
+- **Versión de Escritorio (Electron)**: Empaquetar la app con Electron para notificaciones nativas y automatización.
+- **Dashboard de Analíticas**: Métricas profundas sobre tasas de envío y éxito a lo largo del tiempo.
+
+---
+
+## � Stack Tecnológico
+- **Framework**: React + Vite
+- **Estilos**: Tailwind CSS + Framer Motion
+- **Datos**: IndexedDB (`idb`)
+- **Utilidades**: `xlsx`, `libphonenumber-js`, `react-hot-toast`
+
+## 🔒 Privacidad
+Esta aplicación se ejecuta **100% en tu dispositivo**. No se envían datos de contactos a servidores externos, solo a WhatsApp a través de los enlaces oficiales `wa.me`.

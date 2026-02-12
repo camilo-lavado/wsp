@@ -17,27 +17,36 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-  justify-content: center; /* Center app */
+@layer base {
+  body {
+    @apply bg-black text-white overflow-x-hidden;
+    background-image: 
+        radial-gradient(circle at 15% 50%, rgba(76, 29, 149, 0.15), transparent 25%), 
+        radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15), transparent 25%);
+    background-attachment: fixed;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-700/50 rounded-full hover:bg-gray-600/80 transition-colors;
+  }
 }
 
-/* Custom Scrollbar for operational look */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #202C33; 
-}
-::-webkit-scrollbar-thumb {
-  background: #374045; 
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #555; 
+@layer utilities {
+  .glass {
+    @apply bg-gray-900/40 backdrop-blur-xl border border-white/5 shadow-xl;
+  }
+  .glass-card {
+    @apply bg-gray-800/30 backdrop-blur-md border border-white/5;
+  }
+  .text-glow {
+    text-shadow: 0 0 20px rgba(37, 211, 102, 0.3);
+  }
 }
