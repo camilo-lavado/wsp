@@ -1,20 +1,42 @@
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, MessageSquare } from 'lucide-react';
-import { clsx } from 'clsx';
+import { Contact } from '../db';
 
-export const MessageEditor = ({ template, setTemplate, contacts = [] }) => {
+interface MessageEditorProps {
+  template: string;
+  setTemplate: React.Dispatch<React.SetStateAction<string>>;
+  contacts?: Contact[];
+}
+
+export const MessageEditor: React.FC<MessageEditorProps> = ({ template, setTemplate, contacts = [] }) => {
   const [preview, setPreview] = useState('');
 
   // Extract variables from the first contact to show as available
-  const availableVars = contacts.length > 0 ? Object.keys(contacts[0]).filter(k => k !== 'id' && k !== 'status' && k !== 'sentAt') : ['name', 'phone'];
+  const availableVars = contacts.length > 0 ? Object.keys(contacts[0].data).filter(k => !k.startsWith('_')).concat(['name', 'phone']) : ['name', 'phone'];
+  // Note: I adjusted this to look at contacts[0].data and filter out internal keys starting with _
+  // Also added explicit name/phone just in case.
+  // Actually, let's keep it closer to original but type safe.
+  // Original: Object.keys(contacts[0]).filter(k => k !== 'id' && k !== 'status' && k !== 'sentAt')
+  // In TS, contacts[0] is Contact object. Data is in contacts[0].data.
+  
+  const getAvailableVars = () => {
+      if (contacts.length === 0) return ['name', 'phone'];
+      const contactData = contacts[0].data || {};
+      return Object.keys(contactData).filter(k => !k.startsWith('_'));
+  };
+
+  const vars = getAvailableVars();
 
   useEffect(() => {
     if (contacts.length > 0) {
       let msg = template;
       const contact = contacts[0];
-      Object.keys(contact).forEach(key => {
+      const data = contact.data || {};
+      
+      // Also map top level properties if needed, but mostly data
+      Object.keys(data).forEach(key => {
         const regex = new RegExp(`{${key}}`, 'gi'); // Case insensitive replacement
-        msg = msg.replace(regex, contact[key] || '');
+        msg = msg.replace(regex, data[key] || '');
       });
       setPreview(msg);
     } else {
@@ -22,7 +44,7 @@ export const MessageEditor = ({ template, setTemplate, contacts = [] }) => {
     }
   }, [template, contacts]);
 
-  const insertVariable = (varName) => {
+  const insertVariable = (varName: string) => {
     setTemplate(prev => prev + `{${varName}}`);
   };
 
@@ -42,7 +64,7 @@ export const MessageEditor = ({ template, setTemplate, contacts = [] }) => {
           onChange={(e) => setTemplate(e.target.value)}
         />
         <div className="mt-2 flex flex-wrap gap-2">
-          {availableVars.map(v => (
+          {vars.map(v => (
             <button 
               key={v}
               onClick={() => insertVariable(v)}

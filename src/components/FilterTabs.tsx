@@ -1,7 +1,14 @@
 import React from 'react';
 import { clsx } from 'clsx';
+import { Contact } from '../db';
 
-export const FilterTabs = ({ filter, setFilter, contacts }) => {
+interface FilterTabsProps {
+  filter: string;
+  setFilter: (f: string) => void;
+  contacts: Contact[];
+}
+
+export const FilterTabs: React.FC<FilterTabsProps> = ({ filter, setFilter, contacts }) => {
   return (
     <div className="flex gap-2 border-b border-gray-700 pb-1">
         {['all', 'pending', 'sent', 'error'].map(f => (
@@ -22,6 +29,7 @@ export const FilterTabs = ({ filter, setFilter, contacts }) => {
                         if (f === 'pending') return c.status === 'pending';
                         if (f === 'sent') return c.status === 'sent';
                         if (f === 'error') return c.status === 'failed' || !c.data._isValid;
+                        return false;
                     }).length}
                 </span>
             </button>

@@ -1,32 +1,34 @@
-import React, { useCallback } from 'react'; 
-// I'll use native input type="file" for simplicity or install react-dropzone.
-// Plan only mentioned xlsx. I can use native.
+import React from 'react'; 
 import * as XLSX from 'xlsx';
-import { Upload, FileSpreadsheet } from 'lucide-react';
-import { clsx } from 'clsx';
+import { FileSpreadsheet } from 'lucide-react';
 
-export const FileUploader = ({ onDataLoaded }) => {
-  const processFile = (file) => {
+interface FileUploaderProps {
+  onDataLoaded: (data: any[]) => void;
+}
+
+export const FileUploader: React.FC<FileUploaderProps> = ({ onDataLoaded }) => {
+  const processFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
-      const data = new Uint8Array(e.target.result);
+      if (!e.target?.result) return;
+      const data = new Uint8Array(e.target.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); // defval to keep empty cells
-      onDataLoaded(jsonData);
+      onDataLoaded(jsonData as any[]);
     };
     reader.readAsArrayBuffer(file);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       processFile(e.dataTransfer.files[0]);
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       processFile(e.target.files[0]);
     }
@@ -37,7 +39,7 @@ export const FileUploader = ({ onDataLoaded }) => {
       className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-whatsapp-light transition-colors cursor-pointer bg-surface-card"
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
-      onClick={() => document.getElementById('fileInput').click()}
+      onClick={() => document.getElementById('fileInput')?.click()}
     >
       <input 
         id="fileInput" 

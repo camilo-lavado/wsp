@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
-import { Save, FileText, Trash2, Plus, ChevronDown } from 'lucide-react';
+import { FileText, Trash2, Plus } from 'lucide-react';
+import { Template } from '../db';
 
-export const TemplateManager = ({ currentTemplate, onLoad, onSave, onDelete, templates }) => {
+interface TemplateManagerProps {
+  currentTemplate: string;
+  onLoad: (t: Template) => void;
+  onSave: (name: string, text: string) => Promise<void>;
+  onDelete: (name: string) => Promise<void>;
+  templates: Template[];
+}
+
+export const TemplateManager: React.FC<TemplateManagerProps> = ({ currentTemplate, onLoad, onSave, onDelete, templates }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [newName, setNewName] = useState('');
 

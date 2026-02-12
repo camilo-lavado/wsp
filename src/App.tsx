@@ -5,11 +5,13 @@ import { BlacklistManager } from './components/BlacklistManager';
 import { Toaster } from 'react-hot-toast';
 import { AnimatePresence } from 'framer-motion';
 
-function App() {
-  const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'editor', 'blacklist'
-  const [activeCampaignId, setActiveCampaignId] = useState(null);
+type ViewState = 'dashboard' | 'editor' | 'blacklist';
 
-  const handleSelectCampaign = (id) => {
+function App() {
+  const [currentView, setCurrentView] = useState<ViewState>('dashboard');
+  const [activeCampaignId, setActiveCampaignId] = useState<number | null>(null);
+
+  const handleSelectCampaign = (id: number) => {
     setActiveCampaignId(id);
     setCurrentView('editor');
   };

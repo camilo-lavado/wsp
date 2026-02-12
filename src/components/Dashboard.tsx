@@ -1,12 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../db';
-import { Plus, Clock, ChevronRight, Trash2, Archive, Activity, Ghost } from 'lucide-react';
-import { clsx } from 'clsx';
+import { db, Campaign } from '../db';
+import { Plus, Clock, ChevronRight, Trash2, Ghost } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
-export const Dashboard = ({ onSelectCampaign, onOpenBlacklist }) => {
-  const [campaigns, setCampaigns] = useState([]);
+interface DashboardProps {
+  onSelectCampaign: (id: number) => void;
+  onOpenBlacklist: () => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onSelectCampaign, onOpenBlacklist }) => {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState('');
 
@@ -32,13 +36,20 @@ export const Dashboard = ({ onSelectCampaign, onOpenBlacklist }) => {
     }
   };
 
-  const handleDelete = async (e, id) => {
+  const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     if (confirm('Delete this campaign totally?')) {
         await db.deleteCampaign(id);
         loadCampaigns();
         toast.success('Campaign deleted');
     }
+  };
+
+  const getStats = (c: Campaign) => {
+    const total = c.contacts?.length || 0;
+    const sent = c.contacts?.filter(x => x.status === 'sent').length || 0;
+    const percent = total > 0 ? Math.round((sent / total) * 100) : 0;
+    return { total, sent, percent };
   };
 
   return (
@@ -124,11 +135,13 @@ export const Dashboard = ({ onSelectCampaign, onOpenBlacklist }) => {
              )}
              
              {campaigns.map(c => {
+                 // Ensure ID is present for key and handling
+                 if (c.id === undefined) return null;
                  const stats = getStats(c);
                  return (
                    <div 
                       key={c.id}
-                      onClick={() => onSelectCampaign(c.id)}
+                      onClick={() => c.id !== undefined && onSelectCampaign(c.id)}
                       className="glass-card p-6 rounded-xl hover:bg-white/5 transition-all cursor-pointer group relative overflow-hidden"
                    >
                       <div className="absolute top-0 left-0 w-1 h-full bg-whatsapp-dark opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -138,12 +151,12 @@ export const Dashboard = ({ onSelectCampaign, onOpenBlacklist }) => {
                               <h3 className="text-xl font-bold text-gray-100 group-hover:text-whatsapp-light transition-colors">{c.name}</h3>
                               <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
                                 <Clock size={14} />
-                                <span>{new Date(c.updatedAt || c.created || Date.now()).toLocaleDateString()}</span>
+                                <span>{new Date(c.updatedAt || Date.now()).toLocaleDateString()}</span>
                               </div>
                           </div>
                           <div className="flex items-center gap-2">
                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(e, c.id); }}
+                                onClick={(e) => { e.stopPropagation(); c.id !== undefined && handleDelete(e, c.id); }}
                                 className="p-2 text-gray-500 hover:text-red-400 hover:bg-white/10 rounded-full transition-colors z-10"
                              >
                                 <Trash2 size={18} />
@@ -171,12 +184,4 @@ export const Dashboard = ({ onSelectCampaign, onOpenBlacklist }) => {
        </div>
     </motion.div>
   );
-};
-
-// Helper function
-const getStats = (c) => {
-    const total = c.contacts?.length || 0;
-    const sent = c.contacts?.filter(x => x.status === 'sent').length || 0;
-    const percent = total > 0 ? Math.round((sent / total) * 100) : 0;
-    return { total, sent, percent };
 };

@@ -1,7 +1,14 @@
 import React from 'react';
 import { Save, Download, ArrowLeft } from 'lucide-react';
 
-export const EditorHeader = ({ campaignName, isSaving, onBack, onExport }) => {
+interface EditorHeaderProps {
+  campaignName: string;
+  isSaving: boolean;
+  onBack: () => void;
+  onExport: () => void;
+}
+
+export const EditorHeader: React.FC<EditorHeaderProps> = ({ campaignName, isSaving, onBack, onExport }) => {
   return (
     <div className="flex justify-between items-center bg-gray-900/40 p-4 rounded-xl border border-white/5 shadow-lg">
       <div className="flex items-center gap-3">

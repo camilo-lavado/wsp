@@ -2,9 +2,17 @@ import React, { useState } from 'react';
 import { Send, CheckCircle, Clock, AlertCircle, Ban, XCircle, MoreVertical, ChevronLeft, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Contact } from '../db';
 
-export const ContactTable = ({ contacts, onSend, onBlock, onBounce }) => {
-  const [openMenu, setOpenMenu] = useState(null);
+interface ContactTableProps {
+  contacts: Contact[];
+  onSend: (contact: Contact) => void;
+  onBlock: (contact: Contact) => void;
+  onBounce: (contact: Contact) => void;
+}
+
+export const ContactTable: React.FC<ContactTableProps> = ({ contacts, onSend, onBlock, onBounce }) => {
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
@@ -22,7 +30,7 @@ export const ContactTable = ({ contacts, onSend, onBlock, onBounce }) => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentContacts = contacts.slice(startIndex, startIndex + itemsPerPage);
 
-  const formatPhone = (phone) => {
+  const formatPhone = (phone: any) => {
     return phone ? String(phone).replace(/[^0-9+]/g, '') : 'N/A';
   };
 

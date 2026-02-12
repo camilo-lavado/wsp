@@ -1,9 +1,13 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { CountryCode } from 'libphonenumber-js';
 
-// Common countries for quick selection. 
-// Ideally we'd use a full list but keeping it simple/performant for major use cases.
-const COUNTRIES = [
+interface Country {
+  code: CountryCode;
+  name: string;
+  dial: string;
+}
+
+const COUNTRIES: Country[] = [
   { code: 'CL', name: 'Chile', dial: '+56' },
   { code: 'AR', name: 'Argentina', dial: '+54' },
   { code: 'PE', name: 'Peru', dial: '+51' },
@@ -14,13 +18,20 @@ const COUNTRIES = [
   { code: 'BR', name: 'Brasil', dial: '+55' },
 ];
 
-export const CountrySelector = ({ selected, onChange }) => {
+export type CountrySelection = CountryCode | 'XX';
+
+interface CountrySelectorProps {
+  selected: CountrySelection;
+  onChange: (value: CountrySelection) => void;
+}
+
+export const CountrySelector: React.FC<CountrySelectorProps> = ({ selected, onChange }) => {
   return (
     <div className="flex items-center gap-2 mb-4 bg-gray-900/50 p-2 rounded-lg border border-gray-700/50">
         <span className="text-gray-400 text-sm pl-2">Default Country:</span>
         <select 
             value={selected} 
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => onChange(e.target.value as CountrySelection)}
             className="bg-transparent text-white text-sm font-medium outline-none cursor-pointer hover:text-whatsapp-light transition-colors"
         >
             {COUNTRIES.map(c => (

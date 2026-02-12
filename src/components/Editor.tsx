@@ -1,34 +1,87 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FileUploader } from './FileUploader';
 import { MessageEditor } from './MessageEditor';
 import { ContactTable } from './ContactTable';
-import { CountrySelector } from './CountrySelector';
-
+import { CountrySelector, CountrySelection } from './CountrySelector';
 import { TemplateManager } from './TemplateManager';
-import { LayoutDashboard, Download, Filter, Zap, ArrowLeft, Save } from 'lucide-react';
+import { Zap } from 'lucide-react';
 import { normalizePhone } from '../utils/phoneUtils';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { clsx } from 'clsx';
-import { db } from '../db';
+import { db, Contact, Template } from '../db';
 import { motion } from 'framer-motion';
 import { EditorHeader } from './EditorHeader';
 import { CampaignStats } from './CampaignStats';
 import { FilterTabs } from './FilterTabs';
 
-export const Editor = ({ campaignId, onBack }) => {
-  const [contacts, setContacts] = useState([]);
+interface EditorProps {
+  campaignId: number | null;
+  onBack: () => void;
+}
+
+export const Editor: React.FC<EditorProps> = ({ campaignId, onBack }) => {
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [template, setTemplate] = useState('');
-  const [templates, setTemplates] = useState([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
   const [filter, setFilter] = useState('all');
   const [campaignName, setCampaignName] = useState('Campaign');
   const [isSaving, setIsSaving] = useState(false);
-  const [country, setCountry] = useState('CL'); // Default country
+  const [country, setCountry] = useState<CountrySelection>('CL'); // Default country
 
-  // ... useEffects
+  // useEffects would go here to load data based on campaignId
+  useEffect(() => {
+      if (campaignId !== null && campaignId !== undefined) {
+          loadCampaign(campaignId);
+      }
+      loadTemplates();
+  }, [campaignId]);
 
-  const handleDataLoaded = async (data) => {
-    const newContacts = data.map((row, idx) => {
+  const loadCampaign = async (id: number) => {
+      try {
+          const c = await db.getCampaign(id);
+          if (c) {
+              setCampaignName(c.name);
+              setContacts(c.contacts || []);
+              setTemplate(c.template || '');
+          }
+      } catch (e) {
+          console.error("Failed to load campaign", e);
+          toast.error("Error loading campaign");
+      }
+  };
+
+  const loadTemplates = async () => {
+      const tpls = await db.getTemplates();
+      setTemplates(tpls);
+  };
+
+  const saveCampaign = async () => {
+      if (!campaignId) return;
+      setIsSaving(true);
+      try {
+          await db.updateCampaign(campaignId, {
+              contacts,
+              template,
+              name: campaignName
+          });
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsSaving(false);
+      }
+  };
+
+  // Auto-save debounced
+  useEffect(() => {
+      const timer = setTimeout(() => {
+          if (campaignId) saveCampaign();
+      }, 2000);
+      return () => clearTimeout(timer);
+  }, [contacts, template, campaignName]);
+
+
+  const handleDataLoaded = async (data: any[]) => {
+    const newContacts: Contact[] = data.map((row, idx) => {
       const keys = Object.keys(row);
       const phoneKey = keys.find(k => /tel|phone|cel|movil/i.test(k)) || 'Telefono';
       let rawPhone = row[phoneKey];
@@ -39,7 +92,7 @@ export const Editor = ({ campaignId, onBack }) => {
       }
 
       // Pass selected country to normalizePhone
-      const { formatted, isValid, display } = normalizePhone(rawPhone, country);
+      const { formatted, isValid, display } = normalizePhone(rawPhone, country === 'XX' ? undefined : country);
 
       return {
         id: `${Date.now()}-${idx}`,
@@ -51,10 +104,10 @@ export const Editor = ({ campaignId, onBack }) => {
     
     // Check blacklist ...
     const checkedContacts = await Promise.all(newContacts.map(async c => {
-        if (c.data._isValid && c.data._phoneE164) {
+        if (c.data && c.data._isValid && c.data._phoneE164) {
             const isBlocked = await db.isBlacklisted(c.data._phoneE164);
             if (isBlocked) {
-                return { ...c, status: 'optout' };
+                return { ...c, status: 'optout' } as Contact;
             }
         }
         return c;
@@ -64,7 +117,7 @@ export const Editor = ({ campaignId, onBack }) => {
     toast.success(`Added ${checkedContacts.length} contacts (${country})`);
   };
   
-  const handleBlock = async (contact) => {
+  const handleBlock = async (contact: Contact) => {
       if (!contact.data._phoneE164) return toast.error("No valid phone to block");
       if (confirm(`Block ${contact.data._phoneE164} from future campaigns?`)) {
           await db.addToBlacklist(contact.data._phoneE164);
@@ -75,42 +128,41 @@ export const Editor = ({ campaignId, onBack }) => {
       }
   };
 
-  const handleBounce = (contact) => {
+  const handleBounce = (contact: Contact) => {
       setContacts(prev => prev.map(c => 
           c.id === contact.id ? { ...c, status: 'bounced' } : c
       ));
       toast('Marked as Invalid/Bounced', { icon: '🚫' });
   };
 
-  const handleSaveTemplate = async (name, text) => {
-    const newTpl = { name, text };
+  const handleSaveTemplate = async (name: string, text: string) => {
+    const newTpl: Template = { name, text };
     await db.saveTemplate(newTpl);
-    setTemplates(prev => [...prev, newTpl]);
+    // Reload to get ID if needed, or just append
+    const tpls = await db.getTemplates();
+    setTemplates(tpls);
     toast.success('Template saved');
   };
 
-  const handleDeleteTemplate = async (name) => {
+  const handleDeleteTemplate = async (name: string) => {
     // We need ID for delete, but our simplistic manager passed name. 
     // Adapting for now to find by name or refactor manager.
     // Let's assume name is unique for simple UX or find the object.
     const tpl = templates.find(t => t.name === name);
-    if (tpl) {
-        await db.deleteTemplate(tpl.id || tpl.name); // IDB auto-generates ID usually.
-        // Wait, I defined keyPath 'id' autoIncrement.
-        // I need to reload templates to get IDs or use name as key.
-        // Let's reload for consistency.
+    if (tpl && tpl.id !== undefined) {
+        await db.deleteTemplate(tpl.id); 
         const tpls = await db.getTemplates();
         setTemplates(tpls);
         toast.success('Template deleted');
     }
   };
 
-  const handleLoadTemplate = (t) => {
+  const handleLoadTemplate = (t: Template) => {
     setTemplate(t.text);
     toast.success(`Loaded "${t.name}"`);
   };
 
-  const generateLink = (contact) => {
+  const generateLink = (contact: Contact) => {
     let msg = template;
     Object.keys(contact.data).forEach(key => {
         const regex = new RegExp(`{${key}}`, 'gi');
@@ -127,7 +179,7 @@ export const Editor = ({ campaignId, onBack }) => {
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
   };
 
-  const handleSend = (contact) => {
+  const handleSend = (contact: Contact) => {
     if (!contact.data._isValid) {
         toast.error("Invalid phone number format");
     }
@@ -155,7 +207,7 @@ export const Editor = ({ campaignId, onBack }) => {
 
   // Keyboard Shortcuts
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
         if (e.altKey && e.key === 'Enter') {
             const nextPending = contacts.find(c => c.status === 'pending');
             if (nextPending) {
@@ -167,8 +219,8 @@ export const Editor = ({ campaignId, onBack }) => {
             }
         }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown as any); // Cast to any because EventListener for keydown expects KeyboardEvent
+    return () => window.removeEventListener('keydown', handleKeyDown as any);
   }, [contacts, template]); 
 
   const filteredContacts = contacts.filter(c => {
@@ -217,9 +269,9 @@ export const Editor = ({ campaignId, onBack }) => {
                 <TemplateManager 
                     currentTemplate={template}
                     templates={templates}
-                    onSave={handleSaveTemplate}
+                    onSave={async (name, text) => { await handleSaveTemplate(name, text); }}
                     onLoad={handleLoadTemplate}
-                    onDelete={handleDeleteTemplate}
+                    onDelete={async (name) => { await handleDeleteTemplate(name); }}
                 />
                 <MessageEditor 
                   template={template} 

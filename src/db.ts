@@ -1,10 +1,62 @@
-import { openDB } from 'idb';
+import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
 const DB_NAME = 'wsp_campaigns_db';
 const DB_VERSION = 2;
 
-export const initDB = async () => {
-  return openDB(DB_NAME, DB_VERSION, {
+export interface ContactData {
+  [key: string]: any;
+  _phoneDisplay?: string;
+  _phoneE164?: string;
+  _isValid?: boolean;
+}
+
+export interface Contact {
+  id: string;
+  data: ContactData;
+  status: 'pending' | 'sent' | 'failed' | 'optout' | 'bounced';
+  sentAt?: string | null;
+}
+
+export interface Campaign {
+  id?: number;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+  contacts: Contact[];
+  template: string;
+  status: 'active' | 'archived';
+}
+
+export interface Template {
+  id?: number;
+  name: string;
+  text: string;
+}
+
+export interface BlacklistEntry {
+  phone: string;
+  reason: string;
+  addedAt: Date;
+}
+
+interface WSPDatabase extends DBSchema {
+  campaigns: {
+    key: number;
+    value: Campaign;
+    indexes: { 'createdAt': Date };
+  };
+  templates: {
+    key: number;
+    value: Template;
+  };
+  blacklist: {
+    key: string;
+    value: BlacklistEntry;
+  };
+}
+
+export const initDB = async (): Promise<IDBPDatabase<WSPDatabase>> => {
+  return openDB<WSPDatabase>(DB_NAME, DB_VERSION, {
     upgrade(db) {
       // Campaigns Store
       if (!db.objectStoreNames.contains('campaigns')) {
@@ -26,19 +78,19 @@ export const initDB = async () => {
 };
 
 export const db = {
-  async getAllCampaigns() {
+  async getAllCampaigns(): Promise<Campaign[]> {
     const db = await initDB();
     return db.getAllFromIndex('campaigns', 'createdAt');
   },
 
-  async getCampaign(id) {
+  async getCampaign(id: number): Promise<Campaign | undefined> {
     const db = await initDB();
     return db.get('campaigns', id);
   },
 
-  async createCampaign(name) {
+  async createCampaign(name: string): Promise<number> {
     const db = await initDB();
-    const campaign = {
+    const campaign: Campaign = {
       name,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -49,7 +101,7 @@ export const db = {
     return db.add('campaigns', campaign);
   },
 
-  async updateCampaign(id, data) {
+  async updateCampaign(id: number, data: Partial<Campaign>): Promise<Campaign> {
     const db = await initDB();
     const campaign = await db.get('campaigns', id);
     if (!campaign) throw new Error('Campaign not found');
@@ -59,46 +111,46 @@ export const db = {
     return updated;
   },
 
-  async deleteCampaign(id) {
+  async deleteCampaign(id: number): Promise<void> {
     const db = await initDB();
     return db.delete('campaigns', id);
   },
   
-  // Template methods compatible with what we had in localStorage
-  async getTemplates() {
+  // Template methods
+  async getTemplates(): Promise<Template[]> {
       const db = await initDB();
       return db.getAll('templates');
   },
   
-  async saveTemplate(template) {
+  async saveTemplate(template: Template): Promise<number> {
       const db = await initDB();
       return db.put('templates', template);
   },
   
-  async deleteTemplate(id) {
+  async deleteTemplate(id: number): Promise<void> {
       const db = await initDB();
       return db.delete('templates', id);
   },
 
   // Blacklist
-  async addToBlacklist(phone, reason = 'opt-out') {
+  async addToBlacklist(phone: string, reason: string = 'opt-out'): Promise<string> {
       const db = await initDB();
       return db.put('blacklist', { phone, reason, addedAt: new Date() });
   },
 
-  async isBlacklisted(phone) {
+  async isBlacklisted(phone: string): Promise<boolean> {
       if (!phone) return false;
       const db = await initDB();
       const entry = await db.get('blacklist', phone);
       return !!entry;
   },
 
-  async getBlacklist() {
+  async getBlacklist(): Promise<BlacklistEntry[]> {
       const db = await initDB();
       return db.getAll('blacklist');
   },
 
-  async removeFromBlacklist(phone) {
+  async removeFromBlacklist(phone: string): Promise<void> {
       const db = await initDB();
       return db.delete('blacklist', phone);
   }

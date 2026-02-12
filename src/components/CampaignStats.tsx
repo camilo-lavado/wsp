@@ -1,6 +1,11 @@
 import React from 'react';
+import { Contact } from '../db';
 
-export const CampaignStats = ({ contacts }) => {
+interface CampaignStatsProps {
+  contacts: Contact[];
+}
+
+export const CampaignStats: React.FC<CampaignStatsProps> = ({ contacts }) => {
   return (
     <div className="bg-surface-card p-4 rounded-lg border border-gray-700">
       <h3 className="text-sm font-medium text-gray-400 mb-3">Campaign Progress</h3>

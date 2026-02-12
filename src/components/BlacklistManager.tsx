@@ -1,11 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../db';
+import { db, BlacklistEntry } from '../db';
 import { Trash2, Search, ArrowLeft, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 
-export const BlacklistManager = ({ onBack }) => {
-  const [blacklist, setBlacklist] = useState([]);
+interface BlacklistManagerProps {
+  onBack: () => void;
+}
+
+export const BlacklistManager: React.FC<BlacklistManagerProps> = ({ onBack }) => {
+  const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -15,10 +19,10 @@ export const BlacklistManager = ({ onBack }) => {
   const loadBlacklist = async () => {
     const list = await db.getBlacklist();
     // Sort by addedAt desc
-    setBlacklist(list.sort((a,b) => new Date(b.addedAt) - new Date(a.addedAt)));
+    setBlacklist(list.sort((a,b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime()));
   };
 
-  const handleUnblock = async (phone) => {
+  const handleUnblock = async (phone: string) => {
     if (confirm(`Unblock ${phone}? This number will be allowed in future campaigns.`)) {
         await db.removeFromBlacklist(phone);
         setBlacklist(prev => prev.filter(item => item.phone !== phone));
