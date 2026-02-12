@@ -13,6 +13,33 @@ vi.mock('../db', () => ({
   }
 }));
 
+// Mock i18n
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'dashboard.created': 'Campaign created',
+        'dashboard.createError': 'Failed to create campaign',
+        'dashboard.deleteConfirm': 'Delete this campaign totally?',
+        'dashboard.deleted': 'Campaign deleted',
+        'modal.title': 'Create New Campaign',
+        'modal.namePlaceholder': 'Campaign Name',
+        'modal.create': 'Start',
+        'modal.cancel': 'Cancel'
+      };
+      return translations[key] || key;
+    },
+    i18n: {
+      language: 'en',
+      changeLanguage: vi.fn()
+    }
+  }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: vi.fn()
+  }
+}));
+
 // Mock child components that are not focus of this test but needed for render
 vi.mock('../components/DashboardHeader', () => ({
   DashboardHeader: ({ onNewCampaign, onOpenBlacklist }: any) => (

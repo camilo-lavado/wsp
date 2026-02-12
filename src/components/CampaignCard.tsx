@@ -1,6 +1,7 @@
 import React from 'react';
 import { Campaign } from '../db';
 import { Clock, ChevronRight, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface CampaignCardProps {
   campaign: Campaign;
@@ -9,6 +10,8 @@ interface CampaignCardProps {
 }
 
 export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onClick, onDelete }) => {
+  const { t, i18n } = useTranslation();
+
   const getStats = (c: Campaign) => {
     const total = c.contacts?.length || 0;
     const sent = c.contacts?.filter(x => x.status === 'sent').length || 0;
@@ -30,7 +33,7 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onClick, o
                <h3 className="text-xl font-bold text-gray-100 group-hover:text-whatsapp-light transition-colors">{campaign.name}</h3>
                <div className="flex items-center gap-2 text-sm text-gray-400 mt-1">
                  <Clock size={14} />
-                 <span>{new Date(campaign.updatedAt || Date.now()).toLocaleDateString()}</span>
+                 <span>{new Date(campaign.updatedAt || Date.now()).toLocaleDateString(i18n.language)}</span>
                </div>
            </div>
            <div className="flex items-center gap-2">
@@ -53,7 +56,7 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({ campaign, onClick, o
                ></div>
            </div>
            <div className="text-sm text-gray-400 min-w-[120px] text-right">
-               {stats.sent} / {stats.total} sent ({stats.percent}%)
+               {t('dashboard.stats', { sent: stats.sent, total: stats.total, percent: stats.percent })}
            </div>
        </div>
     </div>

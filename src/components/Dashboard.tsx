@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
 import { db, Campaign } from '../db';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -13,6 +15,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ onSelectCampaign, onOpenBlacklist }) => {
+  const { t } = useTranslation();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -29,20 +32,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCampaign, onOpenBl
   const handleCreate = async (name: string) => {
     try {
       const id = await db.createCampaign(name);
-      toast.success('Campaign created');
+      toast.success(t('dashboard.created'));
       onSelectCampaign(id);
     } catch (e) {
-      toast.error('Failed to create campaign');
+      toast.error(t('dashboard.createError'));
       console.error(e);
     }
   };
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (confirm('Delete this campaign totally?')) {
+    if (confirm(t('dashboard.deleteConfirm'))) {
         await db.deleteCampaign(id);
         loadCampaigns();
-        toast.success('Campaign deleted');
+        toast.success(t('dashboard.deleted'));
     }
   };
 
