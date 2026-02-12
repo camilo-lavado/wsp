@@ -75,9 +75,6 @@ Esta es una aplicación web construida con React y Vite. Necesitas [Node.js](htt
 Para mantener la salud del proyecto, hemos identificado áreas para trabajo futuro:
 
 ### Deuda Técnica
-- **Cobertura de Tests**: Actualmente no hay tests unitarios o de integración. Añadir tests para `phoneUtils.js` y `db.js` es crítico.
-- **TypeScript**: El proyecto está en JavaScript. Migrar a **TypeScript** prevendría errores en tiempo de ejecución.
-- **División de Componentes**: `Editor.jsx` ha sido refactorizado, pero otros componentes podrían beneficiarse de una mayor modularidad.
 - **Textos Hardcodeados**: Implementar una librería i18n real (como `react-i18next`) sería mejor que textos manuales.
 
 ### Hoja de Ruta
