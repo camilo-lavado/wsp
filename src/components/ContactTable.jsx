@@ -34,7 +34,16 @@ export const ContactTable = ({ contacts, onSend }) => {
                 {contact.data.nombre || contact.data.name || contact.data.Nombre || 'Unknown'}
               </td>
               <td className="px-6 py-4 font-mono text-gray-400">
-                {formatPhone(contact.data.telefono || contact.data.phone || contact.data.Telefono || contact.data.Celular)}
+                <div className="flex items-center gap-2">
+                  {contact.data._isValid ? (
+                    <span className="text-gray-300">{contact.data._phoneDisplay}</span>
+                  ) : (
+                     <div className="flex items-center gap-1 text-red-400" title="Invalid Format">
+                       <AlertCircle size={14} />
+                       <span className="line-through opacity-70">{formatPhone(contact.data.telefono || contact.data.phone || contact.data.Telefono || contact.data.Celular)}</span>
+                     </div>
+                  )}
+                </div>
               </td>
               <td className="px-6 py-4">
                 <span className={clsx(

@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FileUploader } from './components/FileUploader';
 import { MessageEditor } from './components/MessageEditor';
 import { ContactTable } from './components/ContactTable';
-import { LayoutDashboard, Save, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Save, Trash2, Download } from 'lucide-react';
+import { normalizePhone } from './utils/phoneUtils';
+import toast, { Toaster } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 
 const STORAGE_KEY = 'wsp_sender_state_v1';
 
@@ -31,14 +34,30 @@ function App() {
 
   const handleDataLoaded = (data) => {
     // Map raw data to contact objects with status
-    // Basic ID generation using timestamp + index
-    const newContacts = data.map((row, idx) => ({
-      id: `${Date.now()}-${idx}`,
-      data: row,
-      status: 'pending',
-      sentAt: null
-    }));
+    const newContacts = data.map((row, idx) => {
+      // Find phone number dynamically
+      const keys = Object.keys(row);
+      const phoneKey = keys.find(k => /tel|phone|cel|movil/i.test(k)) || 'Telefono';
+      let rawPhone = row[phoneKey];
+      
+      // Fallback: search for numeric-like fields
+      if (!rawPhone) {
+         const possible = keys.find(k => String(row[k]).replace(/[^0-9]/g, '').length > 7);
+         if (possible) rawPhone = row[possible];
+      }
+
+      // Normalize
+      const { formatted, isValid, display } = normalizePhone(rawPhone);
+
+      return {
+        id: `${Date.now()}-${idx}`,
+        data: { ...row, _phoneDisplay: display, _phoneE164: formatted, _isValid: isValid },
+        status: 'pending',
+        sentAt: null
+      };
+    });
     setContacts(newContacts);
+    toast.success(`Loaded ${newContacts.length} contacts`);
   };
 
   const handleClear = () => {
@@ -57,25 +76,28 @@ function App() {
         msg = msg.replace(regex, contact.data[key] || '');
     });
     
-    // Find phone number
-    // Heuristic: look for 'telefon', 'phone', 'celular', 'movil' or just first column that looks like a number?
-    // For now, check specific keys or first key that has "phone" or "tel" in name.
-    const keys = Object.keys(contact.data);
-    const phoneKey = keys.find(k => /tel|phone|cel|movil/i.test(k)) || 'Telefono'; // Default to 'Telefono' if not found
+    // Use validated phone if available, else raw
+    let phone = contact.data._phoneE164;
     
-    let phone = contact.data[phoneKey];
-    if (!phone) {
-      // Fallback: try to find any field with numbers > 7 digits
-       const possible = keys.find(k => String(contact.data[k]).replace(/[^0-9]/g, '').length > 7);
-       if (possible) phone = contact.data[possible];
+    if (!contact.data._isValid) {
+        // Fallback or alert? For now, try best effort cleanup on raw data
+         const keys = Object.keys(contact.data);
+         const phoneKey = keys.find(k => /tel|phone|cel|movil/i.test(k)) || 'Telefono';
+         phone = contact.data[phoneKey] || '';
     }
     
-    const cleanPhone = String(phone || '').replace(/[^0-9]/g, ''); // basic cleanup
+    const cleanPhone = String(phone || '').replace(/[^0-9]/g, ''); 
     
     return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
   };
 
   const handleSend = (contact) => {
+    if (!contact.data._isValid) {
+        toast.error("Invalid phone number format");
+        // We allow sending anyway? Maybe user wants to try.
+        // Let's allow it but warn.
+    }
+    
     const link = generateLink(contact);
     window.open(link, '_blank');
     
@@ -83,10 +105,28 @@ function App() {
     setContacts(prev => prev.map(c => 
       c.id === contact.id ? { ...c, status: 'sent', sentAt: new Date().toISOString() } : c
     ));
+    toast.success("Message link opened");
+  };
+
+  const handleExport = () => {
+    if (contacts.length === 0) return toast.error("No data to export");
+    
+    const exportData = contacts.map(c => ({
+      ...c.data,
+      Status: c.status,
+      SentTime: c.sentAt ? new Date(c.sentAt).toLocaleString() : ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Report");
+    XLSX.writeFile(wb, `WhatsApp_Report_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast.success("Report downloaded!");
   };
 
   return (
     <div className="min-h-screen w-full bg-[#242424] text-white p-8 font-sans">
+      <Toaster position="top-right" toastOptions={{ style: { background: '#333', color: '#fff' } }} />
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header */}
@@ -100,13 +140,22 @@ function App() {
               <p className="text-gray-400 text-sm">Operative Dashboard</p>
             </div>
           </div>
-          <button 
-            onClick={handleClear}
-            className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-800 text-gray-400 hover:bg-red-900/20 hover:text-red-400 hover:border-red-900 border border-transparent transition-all text-sm"
-          >
-            <Trash2 size={16} />
-            Clear Data
-          </button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleExport}
+              className="flex items-center gap-2 px-4 py-2 rounded-md bg-whatsapp-dark text-white hover:bg-whatsapp-teal transition-all text-sm shadow-lg"
+            >
+              <Download size={16} />
+              Export Report
+            </button>
+            <button 
+              onClick={handleClear}
+              className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-800 text-gray-400 hover:bg-red-900/20 hover:text-red-400 hover:border-red-900 border border-transparent transition-all text-sm"
+            >
+              <Trash2 size={16} />
+              Clear Data
+            </button>
+          </div>
         </div>
 
         {/* Main Grid */}
