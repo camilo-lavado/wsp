@@ -1,14 +1,17 @@
 import React from 'react';
-import { Save, Download, ArrowLeft } from 'lucide-react';
+import { Save, Download, ArrowLeft, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface EditorHeaderProps {
   campaignName: string;
   isSaving: boolean;
   onBack: () => void;
   onExport: () => void;
+  onCleanDuplicates: () => void;
 }
 
-export const EditorHeader: React.FC<EditorHeaderProps> = ({ campaignName, isSaving, onBack, onExport }) => {
+export const EditorHeader: React.FC<EditorHeaderProps> = ({ campaignName, isSaving, onBack, onExport, onCleanDuplicates }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-between items-center bg-gray-900/40 p-4 rounded-xl border border-white/5 shadow-lg">
       <div className="flex items-center gap-3">
@@ -24,6 +27,14 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({ campaignName, isSavi
         </div>
       </div>
       <div className="flex gap-2">
+        <button 
+          onClick={onCleanDuplicates}
+          className="flex items-center gap-2 px-4 py-2 rounded-md bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-all text-sm border border-gray-700"
+          title={t('editor.cleanDuplicatesTitle')}
+        >
+          <Trash2 size={16} />
+          {t('editor.cleanDuplicates')}
+        </button>
         <button 
           onClick={onExport}
           className="flex items-center gap-2 px-4 py-2 rounded-md bg-whatsapp-dark text-white hover:bg-whatsapp-teal transition-all text-sm shadow-lg"

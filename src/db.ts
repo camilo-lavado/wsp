@@ -1,7 +1,7 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 
 const DB_NAME = 'wsp_campaigns_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export interface ContactData {
   [key: string]: any;
@@ -12,6 +12,7 @@ export interface ContactData {
 
 export interface Contact {
   id: string;
+  campaignId?: number;
   data: ContactData;
   status: 'pending' | 'sent' | 'failed' | 'optout' | 'bounced';
   sentAt?: string | null;
@@ -22,7 +23,7 @@ export interface Campaign {
   name: string;
   createdAt: Date;
   updatedAt: Date;
-  contacts: Contact[];
+  contacts?: Contact[]; // Optional now, since we store separately
   template: string;
   status: 'active' | 'archived';
 }
@@ -53,11 +54,16 @@ interface WSPDatabase extends DBSchema {
     key: string;
     value: BlacklistEntry;
   };
+  contacts: {
+    key: string;
+    value: Contact;
+    indexes: { 'campaignId': number };
+  };
 }
 
 export const initDB = async (): Promise<IDBPDatabase<WSPDatabase>> => {
   return openDB<WSPDatabase>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
+    async upgrade(db, oldVersion, newVersion, transaction) {
       // Campaigns Store
       if (!db.objectStoreNames.contains('campaigns')) {
         const store = db.createObjectStore('campaigns', { keyPath: 'id', autoIncrement: true });
@@ -72,6 +78,29 @@ export const initDB = async (): Promise<IDBPDatabase<WSPDatabase>> => {
       // Blacklist Store
       if (!db.objectStoreNames.contains('blacklist')) {
         db.createObjectStore('blacklist', { keyPath: 'phone' }); // Phone is unique key
+      }
+
+      // Contacts Store (V3)
+      if (!db.objectStoreNames.contains('contacts')) {
+        const store = db.createObjectStore('contacts', { keyPath: 'id' });
+        store.createIndex('campaignId', 'campaignId');
+      }
+
+      // Migrate V2 to V3
+      if (oldVersion < 3 && db.objectStoreNames.contains('campaigns') && db.objectStoreNames.contains('contacts')) {
+        const campaignStore = transaction.objectStore('campaigns');
+        const contactsStore = transaction.objectStore('contacts');
+        const campaigns = await campaignStore.getAll();
+        
+        for (const c of campaigns) {
+          if (c.contacts && Array.isArray(c.contacts) && c.id) {
+            for (const contact of c.contacts) {
+              await contactsStore.put({ ...contact, campaignId: c.id });
+            }
+            c.contacts = [];
+            await campaignStore.put(c);
+          }
+        }
       }
     },
   });
@@ -129,7 +158,36 @@ export const db = {
 
   async deleteCampaign(id: number): Promise<void> {
     const db = await initDB();
-    return db.delete('campaigns', id);
+    await db.delete('campaigns', id);
+    
+    // Cleanup contacts
+    const tx = db.transaction('contacts', 'readwrite');
+    const index = tx.store.index('campaignId');
+    let cursor = await index.openCursor(IDBKeyRange.only(id));
+    while (cursor) {
+      cursor.delete();
+      cursor = await cursor.continue();
+    }
+  },
+
+  // Contact methods
+  async getContactsByCampaign(campaignId: number): Promise<Contact[]> {
+    const db = await initDB();
+    return db.getAllFromIndex('contacts', 'campaignId', campaignId);
+  },
+
+  async saveContacts(campaignId: number, contacts: Contact[]): Promise<void> {
+    const db = await initDB();
+    const tx = db.transaction('contacts', 'readwrite');
+    for (const contact of contacts) {
+      tx.store.put({ ...contact, campaignId });
+    }
+    await tx.done;
+  },
+
+  async updateContact(contact: Contact): Promise<void> {
+    const db = await initDB();
+    await db.put('contacts', contact);
   },
   
   // Template methods

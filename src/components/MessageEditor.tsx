@@ -28,7 +28,8 @@ export const MessageEditor: React.FC<MessageEditorProps> = ({ template, setTempl
       const data = contact.data || {};
       
       Object.keys(data).forEach(key => {
-        const regex = new RegExp(`{${key}}`, 'gi'); // Case insensitive replacement
+        const escapedKey = String(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\{${escapedKey}\\}`, 'gi'); // Case insensitive replacement
         msg = msg.replace(regex, data[key] || '');
       });
       setPreview(msg);

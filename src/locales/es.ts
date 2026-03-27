@@ -22,6 +22,33 @@ export const es = {
       namePlaceholder: 'ej. Promo Verano 2024',
       cancel: 'Cancelar',
       create: 'Crear Campaña'
+    },
+    editor: {
+      loadError: 'Error al cargar la campaña',
+      saveError: 'Error al guardar la campaña',
+      addedContacts: '{{count}} contactos añadidos ({{country}})',
+      blockConfirm: '¿Bloquear {{phone}} de futuras campañas?',
+      noValidPhone: 'No hay teléfono válido para bloquear',
+      blocked: 'Número añadido a la lista negra',
+      markedBounced: 'Marcado como Inválido/Rebotado',
+      templateSaved: 'Plantilla guardada',
+      templateDeleted: 'Plantilla eliminada',
+      templateLoaded: 'Cargada "{{name}}"',
+      invalidPhone: 'Formato de número inválido',
+      linkOpened: 'Enlace de mensaje abierto',
+      noDataExport: 'Sin datos para exportar',
+      reportDownloaded: '¡Reporte descargado!',
+      sendingNext: 'Enviando siguiente...',
+      noPending: '¡No hay más contactos pendientes!',
+      speedMode: 'Modo Rápido Activo',
+      speedModeHint: 'Usa <1>Alt + Enter</1> para enviar al siguiente contacto automáticamente.',
+      editorView: 'Vista de Edición',
+      export: 'Exportar',
+      saving: 'Guardando...',
+      cleanDuplicates: 'Limpiar Duplicados',
+      cleanDuplicatesTitle: 'Eliminar números duplicados de la lista',
+      removedDuplicates: '{{count}} números duplicados eliminados',
+      noDuplicatesFound: 'No se encontraron duplicados'
     }
   }
 };

@@ -13,75 +13,39 @@ import { motion } from 'framer-motion';
 import { EditorHeader } from './EditorHeader';
 import { CampaignStats } from './CampaignStats';
 import { FilterTabs } from './FilterTabs';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
+import { useCampaign } from '../hooks/useCampaign';
+import { useTemplateManager } from '../hooks/useTemplateManager';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
-interface EditorProps {
-  campaignId: number | null;
-  onBack: () => void;
-}
+export const Editor: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const campaignId = id ? parseInt(id, 10) : null;
+  const navigate = useNavigate();
+  const { t } = useTranslation();
 
-export const Editor: React.FC<EditorProps> = ({ campaignId, onBack }) => {
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [template, setTemplate] = useState('');
-  const [templates, setTemplates] = useState<Template[]>([]);
   const [filter, setFilter] = useState('all');
-  const [campaignName, setCampaignName] = useState('Campaign');
-  const [isSaving, setIsSaving] = useState(false);
   const [country, setCountry] = useState<CountrySelection>('CL'); // Default country
 
-  // useEffects would go here to load data based on campaignId
-  useEffect(() => {
-      if (campaignId !== null && campaignId !== undefined) {
-          loadCampaign(campaignId);
-      }
-      loadTemplates();
-  }, [campaignId]);
-
-  const loadCampaign = async (id: number) => {
-      try {
-          const c = await db.getCampaign(id);
-          if (c) {
-              setCampaignName(c.name);
-              setContacts(c.contacts || []);
-              setTemplate(c.template || '');
-          }
-      } catch (e) {
-          console.error("Failed to load campaign", e);
-          toast.error("Error loading campaign");
-      }
-  };
-
-  const loadTemplates = async () => {
-      const tpls = await db.getTemplates();
-      setTemplates(tpls);
-  };
-
-  const saveCampaign = async () => {
-      if (!campaignId) return;
-      setIsSaving(true);
-      try {
-          await db.updateCampaign(campaignId, {
-              contacts,
-              template,
-              name: campaignName
-          });
-      } catch (e) {
-          console.error(e);
-      } finally {
-          setIsSaving(false);
-      }
-  };
-
-  // Auto-save debounced
-  useEffect(() => {
-      const timer = setTimeout(() => {
-          if (campaignId) saveCampaign();
-      }, 2000);
-      return () => clearTimeout(timer);
-  }, [contacts, template, campaignName]);
+  const { campaignName, contacts, setContacts, template, setTemplate, isSaving } = useCampaign(campaignId);
+  const { templates, handleSaveTemplate, handleDeleteTemplate, handleLoadTemplate } = useTemplateManager(setTemplate);
 
 
   const handleDataLoaded = async (data: any[]) => {
-    const newContacts: Contact[] = data.map((row, idx) => {
+    // 1. Get currently existing phone numbers in the campaign to a Set for O(1) lookup
+    const existingPhones = new Set<string>();
+    contacts.forEach(c => {
+      if (c.data._phoneE164) {
+         existingPhones.add(c.data._phoneE164);
+      }
+    });
+
+    let duplicateCount = 0;
+
+    const newContacts: Contact[] = [];
+    
+    data.forEach((row, idx) => {
       const keys = Object.keys(row);
       const phoneKey = keys.find(k => /tel|phone|cel|movil/i.test(k)) || 'Telefono';
       let rawPhone = row[phoneKey];
@@ -93,13 +57,23 @@ export const Editor: React.FC<EditorProps> = ({ campaignId, onBack }) => {
 
       // Pass selected country to normalizePhone
       const { formatted, isValid, display } = normalizePhone(rawPhone, country === 'XX' ? undefined : country);
+      
+      // Duplicate detection
+      if (formatted && existingPhones.has(formatted)) {
+        duplicateCount++;
+        return; // Skip adding this contact
+      }
 
-      return {
+      if (formatted) {
+        existingPhones.add(formatted); // Add to set so we catch duplicates within the same CSV upload
+      }
+
+      newContacts.push({
         id: `${Date.now()}-${idx}`,
         data: { ...row, _phoneDisplay: display, _phoneE164: formatted, _isValid: isValid },
         status: 'pending',
         sentAt: null
-      };
+      });
     });
     
     // Check blacklist ...
@@ -114,17 +88,23 @@ export const Editor: React.FC<EditorProps> = ({ campaignId, onBack }) => {
     }));
     
     setContacts(prev => [...prev, ...checkedContacts]); 
-    toast.success(`Added ${checkedContacts.length} contacts (${country})`);
+    
+    if (duplicateCount > 0) {
+      toast(`${duplicateCount} duplicated numbers skipped`, { icon: 'ℹ️' });
+    }
+    if (checkedContacts.length > 0) {
+      toast.success(t('editor.addedContacts', { count: checkedContacts.length, country }));
+    }
   };
   
   const handleBlock = async (contact: Contact) => {
-      if (!contact.data._phoneE164) return toast.error("No valid phone to block");
-      if (confirm(`Block ${contact.data._phoneE164} from future campaigns?`)) {
+      if (!contact.data._phoneE164) return toast.error(t('editor.noValidPhone'));
+      if (confirm(t('editor.blockConfirm', { phone: contact.data._phoneE164 }))) {
           await db.addToBlacklist(contact.data._phoneE164);
           setContacts(prev => prev.map(c => 
               c.id === contact.id ? { ...c, status: 'optout' } : c
           ));
-          toast.success("Number added to blacklist");
+          toast.success(t('editor.blocked'));
       }
   };
 
@@ -132,40 +112,14 @@ export const Editor: React.FC<EditorProps> = ({ campaignId, onBack }) => {
       setContacts(prev => prev.map(c => 
           c.id === contact.id ? { ...c, status: 'bounced' } : c
       ));
-      toast('Marked as Invalid/Bounced', { icon: '🚫' });
-  };
-
-  const handleSaveTemplate = async (name: string, text: string) => {
-    const newTpl: Template = { name, text };
-    await db.saveTemplate(newTpl);
-    // Reload to get ID if needed, or just append
-    const tpls = await db.getTemplates();
-    setTemplates(tpls);
-    toast.success('Template saved');
-  };
-
-  const handleDeleteTemplate = async (name: string) => {
-    // We need ID for delete, but our simplistic manager passed name. 
-    // Adapting for now to find by name or refactor manager.
-    // Let's assume name is unique for simple UX or find the object.
-    const tpl = templates.find(t => t.name === name);
-    if (tpl && tpl.id !== undefined) {
-        await db.deleteTemplate(tpl.id); 
-        const tpls = await db.getTemplates();
-        setTemplates(tpls);
-        toast.success('Template deleted');
-    }
-  };
-
-  const handleLoadTemplate = (t: Template) => {
-    setTemplate(t.text);
-    toast.success(`Loaded "${t.name}"`);
+      toast(t('editor.markedBounced'), { icon: '🚫' });
   };
 
   const generateLink = (contact: Contact) => {
     let msg = template;
     Object.keys(contact.data).forEach(key => {
-        const regex = new RegExp(`{${key}}`, 'gi');
+        const escapedKey = String(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`\\{${escapedKey}\\}`, 'gi');
         msg = msg.replace(regex, contact.data[key] || '');
     });
     
@@ -181,18 +135,18 @@ export const Editor: React.FC<EditorProps> = ({ campaignId, onBack }) => {
 
   const handleSend = (contact: Contact) => {
     if (!contact.data._isValid) {
-        toast.error("Invalid phone number format");
+        toast.error(t('editor.invalidPhone'));
     }
     const link = generateLink(contact);
     window.open(link, '_blank');
     setContacts(prev => prev.map(c => 
       c.id === contact.id ? { ...c, status: 'sent', sentAt: new Date().toISOString() } : c
     ));
-    toast.success("Message link opened");
+    toast.success(t('editor.linkOpened'));
   };
 
   const handleExport = () => {
-    if (contacts.length === 0) return toast.error("No data to export");
+    if (contacts.length === 0) return toast.error(t('editor.noDataExport'));
     const exportData = contacts.map(c => ({
       ...c.data,
       Status: c.status,
@@ -202,26 +156,37 @@ export const Editor: React.FC<EditorProps> = ({ campaignId, onBack }) => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Report");
     XLSX.writeFile(wb, `${campaignName}_Report.xlsx`);
-    toast.success("Report downloaded!");
+    toast.success(t('editor.reportDownloaded'));
+  };
+
+  const handleCleanDuplicates = () => {
+    const existingPhones = new Set<string>();
+    const uniqueContacts: Contact[] = [];
+    let duplicatesRemoved = 0;
+
+    contacts.forEach(c => {
+      const phone = c.data._phoneE164;
+      if (phone && existingPhones.has(phone)) {
+        duplicatesRemoved++;
+        // Optionally, if we want to delete them from DB right away, we could.
+        // But the auto-save will handle updating the state, and the DB cleanup
+        // happens naturally since we replace the entire Contacts list.
+      } else {
+        if (phone) existingPhones.add(phone);
+        uniqueContacts.push(c);
+      }
+    });
+
+    if (duplicatesRemoved > 0) {
+      setContacts(uniqueContacts);
+      toast.success(t('editor.removedDuplicates', { count: duplicatesRemoved }));
+    } else {
+      toast(t('editor.noDuplicatesFound'), { icon: '✨' });
+    }
   };
 
   // Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.altKey && e.key === 'Enter') {
-            const nextPending = contacts.find(c => c.status === 'pending');
-            if (nextPending) {
-                e.preventDefault();
-                handleSend(nextPending);
-                toast('Sending next...', { icon: '🚀' });
-            } else {
-                toast("No more pending contacts!");
-            }
-        }
-    };
-    window.addEventListener('keydown', handleKeyDown as any); // Cast to any because EventListener for keydown expects KeyboardEvent
-    return () => window.removeEventListener('keydown', handleKeyDown as any);
-  }, [contacts, template]); 
+  useKeyboardShortcuts(contacts, handleSend);
 
   const filteredContacts = contacts.filter(c => {
     if (filter === 'all') return true;
@@ -244,8 +209,9 @@ export const Editor: React.FC<EditorProps> = ({ campaignId, onBack }) => {
         <EditorHeader 
             campaignName={campaignName} 
             isSaving={isSaving} 
-            onBack={onBack} 
+            onBack={() => navigate('/')} 
             onExport={handleExport} 
+            onCleanDuplicates={handleCleanDuplicates}
         />
 
         {/* Main Grid */}

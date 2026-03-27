@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 import { db, Campaign } from '../db';
 import { motion } from 'framer-motion';
@@ -9,12 +10,8 @@ import { CreateCampaignModal } from './CreateCampaignModal';
 import { CampaignCard } from './CampaignCard';
 import { EmptyCampaignState } from './EmptyCampaignState';
 
-interface DashboardProps {
-  onSelectCampaign: (id: number) => void;
-  onOpenBlacklist: () => void;
-}
-
-export const Dashboard: React.FC<DashboardProps> = ({ onSelectCampaign, onOpenBlacklist }) => {
+export const Dashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -25,15 +22,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCampaign, onOpenBl
 
   const loadCampaigns = async () => {
     const list = await db.getAllCampaigns();
+    
+    // Load contacts for each campaign to show stats
+    const listWithContacts = await Promise.all(list.map(async (c) => {
+      if (c.id !== undefined) {
+        c.contacts = await db.getContactsByCampaign(c.id);
+      }
+      return c;
+    }));
+
     // Sort by newest first
-    setCampaigns(list.reverse());
+    setCampaigns(listWithContacts.reverse());
   };
 
   const handleCreate = async (name: string) => {
     try {
       const id = await db.createCampaign(name);
       toast.success(t('dashboard.created'));
-      onSelectCampaign(id);
+      navigate(`/campaign/${id}`);
     } catch (e) {
       toast.error(t('dashboard.createError'));
       console.error(e);
@@ -58,7 +64,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCampaign, onOpenBl
     >
        <div className="max-w-6xl mx-auto space-y-8 backdrop-blur-sm">
           <DashboardHeader 
-              onOpenBlacklist={onOpenBlacklist} 
+              onOpenBlacklist={() => navigate('/blacklist')} 
               onNewCampaign={() => setIsCreating(true)} 
           />
 
@@ -80,7 +86,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectCampaign, onOpenBl
                    <CampaignCard 
                       key={c.id} 
                       campaign={c} 
-                      onClick={onSelectCampaign} 
+                      onClick={(id) => navigate(`/campaign/${id}`)}
                       onDelete={handleDelete} 
                    />
                  );

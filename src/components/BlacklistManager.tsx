@@ -4,12 +4,10 @@ import { Search, ArrowLeft, ShieldAlert } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { BlacklistTable } from './BlacklistTable';
+import { useNavigate } from 'react-router-dom';
 
-interface BlacklistManagerProps {
-  onBack: () => void;
-}
-
-export const BlacklistManager: React.FC<BlacklistManagerProps> = ({ onBack }) => {
+export const BlacklistManager: React.FC = () => {
+  const navigate = useNavigate();
   const [blacklist, setBlacklist] = useState<BlacklistEntry[]>([]);
   const [search, setSearch] = useState('');
 
@@ -43,7 +41,7 @@ export const BlacklistManager: React.FC<BlacklistManagerProps> = ({ onBack }) =>
        <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8 border-b border-gray-800 pb-6">
-             <button onClick={onBack} className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white">
+             <button onClick={() => navigate('/')} className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white">
                 <ArrowLeft size={24} />
              </button>
              <div>

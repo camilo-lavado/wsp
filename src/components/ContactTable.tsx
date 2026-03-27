@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Contact } from '../db';
 import { ContactRow } from './ContactRow';
-import { PaginationControls } from './PaginationControls';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface ContactTableProps {
   contacts: Contact[];
@@ -12,8 +12,14 @@ interface ContactTableProps {
 }
 
 export const ContactTable: React.FC<ContactTableProps> = ({ contacts, onSend, onBlock, onBounce }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50;
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: contacts.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 64, // estimated height of ContactRow
+    overscan: 10,
+  });
 
   if (!contacts.length) {
     return (
@@ -24,48 +30,49 @@ export const ContactTable: React.FC<ContactTableProps> = ({ contacts, onSend, on
     );
   }
 
-  // Pagination logic
-  const totalPages = Math.ceil(contacts.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentContacts = contacts.slice(startIndex, startIndex + itemsPerPage);
-
   return (
-    <div className="glass-card rounded-xl overflow-hidden shadow-2xl pb-4">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm text-gray-300">
-          <thead className="bg-gray-900/60 text-xs uppercase text-gray-400 backdrop-blur-md">
-            <tr>
-              <th className="px-6 py-4 font-semibold tracking-wider">Name</th>
-              <th className="px-6 py-4 font-semibold tracking-wider">Phone</th>
-              <th className="px-6 py-4 font-semibold tracking-wider">Status</th>
-              <th className="px-6 py-4 text-right font-semibold tracking-wider">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-700/30">
-            <AnimatePresence>
-                {currentContacts.map((contact, index) => (
-                  <ContactRow 
-                    key={contact.id}
-                    contact={contact}
-                    index={index}
-                    onSend={onSend}
-                    onBlock={onBlock}
-                    onBounce={onBounce}
-                  />
-                ))}
-            </AnimatePresence>
-          </tbody>
-        </table>
+    <div className="glass-card rounded-xl overflow-hidden shadow-2xl flex flex-col translate-z-0">
+      <div 
+        ref={parentRef} 
+        className="overflow-auto" 
+        style={{ height: '600px' }} // Fixed height for virtualizer
+      >
+        <div style={{ height: `${rowVirtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+          <table className="w-full text-left text-sm text-gray-300 absolute top-0 left-0">
+            <thead className="bg-gray-900/90 text-xs uppercase text-gray-400 backdrop-blur-md sticky top-0 z-10 shadow-md">
+              <tr>
+                <th className="px-6 py-4 font-semibold tracking-wider">Name</th>
+                <th className="px-6 py-4 font-semibold tracking-wider">Phone</th>
+                <th className="px-6 py-4 font-semibold tracking-wider">Status</th>
+                <th className="px-6 py-4 text-right font-semibold tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-700/30">
+              <AnimatePresence>
+                  {rowVirtualizer.getVirtualItems().length > 0 && (
+                    <tr style={{ height: `${rowVirtualizer.getVirtualItems()[0].start}px` }} />
+                  )}
+                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const contact = contacts[virtualRow.index];
+                    return (
+                      <ContactRow 
+                        key={contact.id}
+                        contact={contact}
+                        index={virtualRow.index}
+                        onSend={onSend}
+                        onBlock={onBlock}
+                        onBounce={onBounce}
+                      />
+                    );
+                  })}
+                  {rowVirtualizer.getVirtualItems().length > 0 && (
+                    <tr style={{ height: `${rowVirtualizer.getTotalSize() - rowVirtualizer.getVirtualItems()[rowVirtualizer.getVirtualItems().length - 1].end}px` }} />
+                  )}
+              </AnimatePresence>
+            </tbody>
+          </table>
+        </div>
       </div>
-      
-      <PaginationControls 
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        startIndex={startIndex}
-        itemsPerPage={itemsPerPage}
-        totalItems={contacts.length}
-      />
     </div>
   );
 };
